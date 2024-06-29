@@ -29,13 +29,24 @@ String infoText = "+++ Zug verspaetung ca 60min +++";
 String routeInfo = "Basel Sbb - Frankfurt - Berlin HBF";
 int x1, x2, minX1, minX2;
 
+// LED control structure
+struct LEDControl {
+  int pin;
+  unsigned long endTime;
+  bool isOn;
+};
+
+LEDControl ledRedControl = {12, 0, false};
+LEDControl ledGreenControl = {14, 0, false};
+LEDControl ledYellowControl = {27, 0, false};
+
 void setup() {
   Serial.begin(115200);
 
   // Initialize the OLED display
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
+    for (;;);
   }
 
   // Initialize LED pins
@@ -76,22 +87,28 @@ void loop() {
 
     // Parse the HTTP request and control LED
     if (request.indexOf("/LED=R_ON") != -1) {
-      digitalWrite(ledRed, HIGH);
+      int duration = parseDuration(request);
+      controlLED(ledRedControl, duration);
     }
     if (request.indexOf("/LED=R_OFF") != -1) {
-      digitalWrite(ledRed, LOW);
+      digitalWrite(ledRedControl.pin, LOW);
+      ledRedControl.isOn = false;
     }
     if (request.indexOf("/LED=G_ON") != -1) {
-      digitalWrite(ledGreen, HIGH);
+      int duration = parseDuration(request);
+      controlLED(ledGreenControl, duration);
     }
     if (request.indexOf("/LED=G_OFF") != -1) {
-      digitalWrite(ledGreen, LOW);
+      digitalWrite(ledGreenControl.pin, LOW);
+      ledGreenControl.isOn = false;
     }
     if (request.indexOf("/LED=Y_ON") != -1) {
-      digitalWrite(ledYellow, HIGH);
+      int duration = parseDuration(request);
+      controlLED(ledYellowControl, duration);
     }
     if (request.indexOf("/LED=Y_OFF") != -1) {
-      digitalWrite(ledYellow, LOW);
+      digitalWrite(ledYellowControl.pin, LOW);
+      ledYellowControl.isOn = false;
     }
 
     // Update display information based on HTTP request
@@ -124,6 +141,11 @@ void loop() {
 
   display.display();
   delay(50); // Adjust scrolling speed
+
+  // Update LEDs
+  updateLED(ledRedControl);
+  updateLED(ledGreenControl);
+  updateLED(ledYellowControl);
 }
 
 void displayStaticInfo() {
@@ -133,7 +155,7 @@ void displayStaticInfo() {
   // Time and train number
   display.setCursor(0, 0);
   display.print(currentTime);
-  display.setCursor(35, 00);
+  display.setCursor(35, 0);
   display.print(trainName + " " + trainNumber);
 
   // Track
@@ -202,3 +224,30 @@ String urlDecode(String str) {
   return decoded;
 }
 
+int parseDuration(String request) {
+  int startIndex = request.indexOf("&duration=");
+  if (startIndex != -1) {
+    int endIndex = request.indexOf(" ", startIndex);
+    String durationString = request.substring(startIndex + 10, endIndex);
+    return durationString.toInt();
+  }
+  return 0;
+}
+
+void controlLED(LEDControl &led, int duration) {
+  digitalWrite(led.pin, HIGH);
+  led.isOn = true;
+  if (duration > 0) {
+    led.endTime = millis() + duration * 1000;
+  } else {
+    led.endTime = 0;
+  }
+}
+
+void updateLED(LEDControl &led) {
+  if (led.isOn && led.endTime > 0 && millis() > led.endTime) {
+    digitalWrite(led.pin, LOW);
+    led.isOn = false;
+    led.endTime = 0;
+  }
+}
