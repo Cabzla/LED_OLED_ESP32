@@ -34,6 +34,11 @@ This repository contains the Arduino code for controlling LEDs and an OLED displ
 - AZ-Delivery 0.91 inch OLED I2C display with 128x32 pixels
 - Breadboard and jumper wires
 
+### Android Client
+
+The Client for the ESP32 can be found in the following repository: [ESP32 LED and Display Controller](https://github.com/Cabzla/LED_OLED_Control)
+
+
 ### Software Requirements
 
 - Arduino IDE
